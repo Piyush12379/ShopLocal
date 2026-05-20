@@ -57,12 +57,19 @@
                 </div>
 
                 {{-- View details link --}}
-                <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-                    <a href="{{ route('orders.confirmation', $order->id) }}"
-                       style="font-size:13px;color:var(--warm);font-weight:500;text-decoration:none">
-                        View full details →
-                    </a>
-                </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);
+            display:flex;align-items:center;justify-content:space-between">
+            <a href="{{ route('orders.confirmation', $order->id) }}"
+           style="font-size:13px;color:var(--warm);font-weight:500;text-decoration:none">
+                View full details →
+            </a>
+            <a href="{{ route('orders.invoice', $order->id) }}"
+              style="font-size:13px;color:var(--muted);text-decoration:none;
+              display:flex;align-items:center;gap:5px;padding:5px 10px;
+              border:1px solid var(--border);border-radius:var(--r)">
+             📄 Download invoice
+            </a>
+     </div>
 
             </div>
             @endforeach

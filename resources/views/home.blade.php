@@ -165,29 +165,63 @@
                     </h3>
                     <p class="product-desc">{{ Str::limit($product->description, 60) }}</p>
 
-                    <div class="product-footer">
-                        <div class="product-price">
-                            @if($product->isOnSale())
-                                <span class="price-old">₹{{ number_format($product->old_price) }}</span>
-                            @endif
-                            <span class="price-current">₹{{ number_format($product->price) }}</span>
-                        </div>
+<div class="product-footer">
+    <div class="product-price">
+        @if($product->isOnSale())
+            <span class="price-old">
+                ₹{{ number_format($product->old_price) }}
+            </span>
+        @endif
 
-                        {{-- Add to cart button --}}
-                        @auth
-                            @if(auth()->user()->isCustomer() && $product->inStock())
-                                <button
-                                 class="add-to-cart-btn"
-                                    data-id="{{ $product->id }}"
-                                   onclick="addToCart(this)"
-                                   title="Add to cart">
-                                    +
-                                </button>
-                            @endif
-                        @else
-                            <a href="{{ route('login') }}" class="add-to-cart-btn" title="Login to buy">+</a>
-                        @endauth
-                    </div>
+        <span class="price-current">
+            ₹{{ number_format($product->price) }}
+        </span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px">
+
+        {{-- ❤️ Wishlist heart button --}}
+        @auth
+            @if(auth()->user()->isCustomer())
+            <button
+                class="wishlist-btn"
+                data-id="{{ $product->id }}"
+                data-wishlisted="{{ in_array($product->id, $wishlistIds) ? 'true' : 'false' }}"
+                onclick="toggleWishlist(this)"
+                title="{{ in_array($product->id, $wishlistIds) ? 'Remove from wishlist' : 'Add to wishlist' }}"
+                style="width:32px;height:32px;border-radius:50%;
+                       background:{{ in_array($product->id, $wishlistIds) ? '#FAECE7' : 'var(--cream)' }};
+                       color:{{ in_array($product->id, $wishlistIds) ? '#C85A3A' : 'var(--muted)' }};
+                       border:1px solid {{ in_array($product->id, $wishlistIds) ? '#F5C4B3' : 'var(--border)' }};
+                       font-size:16px;cursor:pointer;display:flex;
+                       align-items:center;justify-content:center;
+                       transition:all .2s;flex-shrink:0">
+                {{ in_array($product->id, $wishlistIds) ? '♥' : '♡' }}
+            </button>
+            @endif
+        @endauth
+
+        {{-- Add to cart button --}}
+        @auth
+            @if(auth()->user()->isCustomer() && $product->inStock())
+                <button
+                    class="add-to-cart-btn"
+                    data-id="{{ $product->id }}"
+                    onclick="addToCart(this)"
+                    title="Add to cart">
+                    +
+                </button>
+            @endif
+        @else
+            <a href="{{ route('login') }}"
+               class="add-to-cart-btn"
+               title="Login to buy">
+                +
+            </a>
+        @endauth
+
+          </div>
+        </div>
                 </div>
             </div>
             @endforeach
@@ -195,10 +229,20 @@
     @endif
 </section>
 
+{{-- Hidden route URLs for JS --}}
+<div id="cartRoutes"
+     data-add-url="{{ route('cart.add') }}"
+     data-update-url="{{ route('cart.update') }}"
+     data-remove-url="{{ route('cart.remove') }}"
+     data-wishlist-url="{{ route('wishlist.toggle') }}"
+     style="display:none">
+</div>
+
 @endsection
 
 @push('scripts')
 <script>
+
 function addToCart(btn) {
     const productId = btn.getAttribute('data-id');
 
@@ -211,27 +255,34 @@ function addToCart(btn) {
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            'Accept':       'application/json',
+            'Accept': 'application/json',
         },
-        body: JSON.stringify({ product_id: productId }),
+        body: JSON.stringify({
+            product_id: productId
+        }),
     })
     .then(res => res.json())
     .then(data => {
+
         if (data.success) {
-            // ✅ Green tick feedback on the button
+
+            // Green success state
             btn.textContent      = '✓';
             btn.style.background = '#1D9E75';
 
-            // ✅ Update cart badge number in nav
+            // Update cart badge
             const badge = document.getElementById('cartBadge');
-            if (badge) badge.textContent = data.cart_count;
 
-            // ✅ Show toast notification (defined in app.blade.php)
+            if (badge) {
+                badge.textContent = data.cart_count;
+            }
+
+            // Toast
             if (typeof showToast === 'function') {
                 showToast(data.message, '🛒');
             }
 
-            // Reset button after 1.5 seconds
+            // Reset button
             setTimeout(() => {
                 btn.textContent      = '+';
                 btn.style.background = '';
@@ -239,7 +290,8 @@ function addToCart(btn) {
             }, 1500);
 
         } else {
-            // ❌ Error — show red ! on button
+
+            // Error state
             btn.textContent      = '!';
             btn.style.background = '#C85A3A';
 
@@ -255,12 +307,70 @@ function addToCart(btn) {
         }
     })
     .catch(err => {
-        // Network error fallback
+
         console.error('Cart error:', err);
+
         btn.textContent      = '+';
         btn.style.background = '';
         btn.disabled         = false;
     });
 }
+
+
+// Wishlist toggle
+function toggleWishlist(btn) {
+
+    const productId  = btn.getAttribute('data-id');
+    const wishlisted = btn.getAttribute('data-wishlisted') === 'true';
+    const routes     = document.getElementById('cartRoutes').dataset;
+
+    fetch(routes.wishlistUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+            product_id: productId
+        }),
+    })
+    .then(r => r.json())
+    .then(data => {
+
+        if (data.success) {
+
+            // Update heart appearance
+            if (data.in_wishlist) {
+
+                btn.textContent       = '♥';
+                btn.style.background  = '#FAECE7';
+                btn.style.color       = '#C85A3A';
+                btn.style.borderColor = '#F5C4B3';
+
+                btn.setAttribute('data-wishlisted', 'true');
+
+            } else {
+
+                btn.textContent       = '♡';
+                btn.style.background  = 'var(--cream)';
+                btn.style.color       = 'var(--muted)';
+                btn.style.borderColor = 'var(--border)';
+
+                btn.setAttribute('data-wishlisted', 'false');
+            }
+
+            // Toast notification
+            if (typeof showToast === 'function') {
+                showToast(
+                    data.message,
+                    data.in_wishlist ? '❤️' : '🤍'
+                );
+            }
+        }
+    })
+    .catch(err => console.error('Wishlist error:', err));
+}
+
 </script>
 @endpush

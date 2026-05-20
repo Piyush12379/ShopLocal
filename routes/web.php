@@ -8,6 +8,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\WishlistController;
 
 /*
 |--------------------------------------------------------------------------
@@ -62,6 +63,12 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
     Route::post('/orders/place',         [OrderController::class, 'placeOrder'])->name('orders.place');
     Route::get('/orders',                [OrderController::class, 'myOrders'])->name('orders.index');
     Route::get('/orders/{id}/confirmed', [OrderController::class, 'confirmation'])->name('orders.confirmation');
+    Route::get('/orders/{id}/invoice',   [OrderController::class, 'downloadInvoice'])->name('orders.invoice');
+
+    // Wishlist
+    Route::get('/wishlist',          [WishlistController::class, 'index'])->name('wishlist.index');
+    Route::post('/wishlist/toggle',  [WishlistController::class, 'toggle'])->name('wishlist.toggle');
+    Route::delete('/wishlist/remove',[WishlistController::class, 'remove'])->name('wishlist.remove');
 
     // Reviews
     Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])->name('reviews.store');

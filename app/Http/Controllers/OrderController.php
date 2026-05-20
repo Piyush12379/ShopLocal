@@ -7,6 +7,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class OrderController extends Controller
 {
@@ -139,4 +140,19 @@ class OrderController extends Controller
     {
         return collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']);
     }
+
+    /**
+ * Download PDF invoice for an order
+ */
+       public function downloadInvoice($id)
+     {
+        $order = Order::with('items.product.vendor', 'user')
+                  ->where('user_id', auth()->id())
+                  ->findOrFail($id);
+
+        $pdf = Pdf::loadView('orders.invoice', compact('order'))
+              ->setPaper('a4', 'portrait');
+
+        return $pdf->download('ShopLocal-Invoice-#' . $order->id . '.pdf');
+      }
 }

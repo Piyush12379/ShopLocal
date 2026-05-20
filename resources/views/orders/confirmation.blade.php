@@ -83,14 +83,18 @@
     </div>
 
     {{-- Action buttons --}}
-    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-        <a href="{{ route('orders.index') }}" class="btn btn-primary">
-            View my orders
-        </a>
-        <a href="{{ route('home') }}" class="btn btn-outline">
-            Continue shopping
-        </a>
-    </div>
+<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <a href="{{ route('orders.index') }}" class="btn btn-primary">
+        View my orders
+    </a>
+    {{-- ADD THIS --}}
+    <a href="{{ route('orders.invoice', $order->id) }}" class="btn btn-outline">
+        📄 Download invoice
+    </a>
+    <a href="{{ route('home') }}" class="btn btn-outline">
+        Continue shopping
+    </a>
+</div>
 
 </div>
 

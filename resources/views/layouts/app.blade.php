@@ -31,15 +31,42 @@
     <div class="nav-actions">
         @auth
             {{-- Cart icon — only for customers --}}
-           @if(auth()->user()->isCustomer())
-              <a href="{{ route('cart.index') }}" class="nav-icon-btn">
+@if(auth()->user()->isCustomer())
+
+    {{-- Wishlist link --}}
+    <a href="{{ route('wishlist.index') }}"
+       class="nav-icon-btn"
+       title="My wishlist"
+       style="font-size:16px">
+
+        ♡
+
+        @php
+            $wCount = \App\Models\Wishlist::where('user_id', auth()->id())->count();
+        @endphp
+
+        @if($wCount > 0)
+            <span class="cart-badge" style="background:#C85A3A">
+                {{ $wCount }}
+            </span>
+        @endif
+    </a>
+
+    {{-- Cart icon --}}
+    <a href="{{ route('cart.index') }}" class="nav-icon-btn">
         🛒
-              <span class="cart-badge" id="cartBadge">
-                {{ count(session('cart', [])) }}
-               </span>
-             </a>
-              <a href="{{ route('orders.index') }}" class="btn btn-outline btn-sm">My orders</a>
-            @endif
+        <span class="cart-badge" id="cartBadge">
+            {{ count(session('cart', [])) }}
+        </span>
+    </a>
+
+    {{-- Orders --}}
+    <a href="{{ route('orders.index') }}"
+       class="btn btn-outline btn-sm">
+        My orders
+      </a>
+
+         @endif
 
             {{-- Dashboard link based on role --}}
             @if(auth()->user()->isAdmin())

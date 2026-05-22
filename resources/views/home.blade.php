@@ -86,7 +86,7 @@
 </section>
 
 {{-- ═══════════════════════════════════════
-     PRODUCTS GRID
+     PRODUCTS GRID + NEW FILTER BAR
 ═══════════════════════════════════════ --}}
 <section class="section" id="products">
     <div class="section-header">
@@ -103,22 +103,74 @@
         <p class="section-sub">{{ $products->count() }} products found</p>
     </div>
 
-    {{-- Search bar --}}
-    <form method="GET" action="{{ route('home') }}" class="search-form">
+    {{-- Filter Bar --}}
+    <form method="GET" action="{{ route('home') }}#products" id="filterForm">
         @if(request('category'))
             <input type="hidden" name="category" value="{{ request('category') }}">
         @endif
-        <input
-            type="text"
-            name="search"
-            value="{{ request('search') }}"
-            placeholder="Search products..."
-            class="search-input"
-        />
-        <button type="submit" class="btn btn-primary">Search</button>
-        @if(request('search'))
-            <a href="{{ route('home', request('category') ? ['category' => request('category')] : []) }}"
-               class="btn btn-outline">Clear</a>
+        
+        <div class="filter-bar">
+            {{-- Search --}}
+            <div class="filter-group" style="flex:2;min-width:180px">
+                <label class="filter-label">Search</label>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search products..." class="search-input" style="width:100%"/>
+            </div>
+            
+            {{-- Min price --}}
+            <div class="filter-group">
+                <label class="filter-label">Min price (₹)</label>
+                <input type="number" name="min_price" value="{{ request('min_price') }}" placeholder="{{ (int)($priceStats->min_price ?? 0) }}" min="0" class="search-input" style="width:110px"/>
+            </div>
+            
+            {{-- Max price --}}
+            <div class="filter-group">
+                <label class="filter-label">Max price (₹)</label>
+                <input type="number" name="max_price" value="{{ request('max_price') }}" placeholder="{{ (int)($priceStats->max_price ?? 9999) }}" min="0" class="search-input" style="width:110px"/>
+            </div>
+            
+            {{-- Sort --}}
+            <div class="filter-group">
+                <label class="filter-label">Sort by</label>
+                <select name="sort" class="search-input" style="width:150px"
+                 onchange="submitFilter()">
+                    <option value="newest" {{ request('sort','newest') == 'newest' ? 'selected' : '' }}>Newest first</option>
+                    <option value="price_asc" {{ request('sort') == 'price_asc' ? 'selected' : '' }}>Price: Low → High</option>
+                    <option value="price_desc" {{ request('sort') == 'price_desc' ? 'selected' : '' }}>Price: High → Low</option>
+                    <option value="name_asc" {{ request('sort') == 'name_asc' ? 'selected' : '' }}>Name: A → Z</option>
+                </select>
+            </div>
+            
+            {{-- In stock only --}}
+            <div class="filter-group" style="justify-content:flex-end;align-self:flex-end;padding-bottom:2px">
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;white-space:nowrap">
+                  <input type="checkbox"
+                     name="in_stock"
+                     value="1"
+                     {{ request('in_stock') ? 'checked' : '' }}
+                      onchange="submitFilter()"
+                       style="width:15px;height:15px"/>
+                    In stock only
+                </label>
+            </div>
+            
+            {{-- Apply + Clear --}}
+            <div class="filter-group" style="align-self:flex-end;display:flex;gap:8px">
+                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                @if(request()->hasAny(['search','min_price','max_price','sort','in_stock']))
+                    <a href="{{ route('home', request('category') ? ['category'=>request('category')] : []) }}" class="btn btn-outline btn-sm">Clear</a>
+                @endif
+            </div>
+        </div>
+
+        {{-- Active filter pills --}}
+        @if(request()->hasAny(['search','min_price','max_price','in_stock']))
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+            @if(request('search')) <span class="filter-pill">Search: "{{ request('search') }}"</span> @endif
+            @if(request('min_price') || request('max_price'))
+            <span class="filter-pill">Price: ₹{{ request('min_price',0) }} – ₹{{ request('max_price','any') }}</span>
+            @endif
+            @if(request('in_stock')) <span class="filter-pill">In stock only</span> @endif
+        </div>
         @endif
     </form>
 
@@ -134,7 +186,6 @@
         <div class="products-grid">
             @foreach($products as $product)
             <div class="product-card">
-                {{-- Product Image / Emoji --}}
                 <div class="product-img">
                     @if($product->image)
                         <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}"/>
@@ -142,7 +193,6 @@
                         <span class="product-emoji">{{ $product->emoji }}</span>
                     @endif
 
-                    {{-- Badges --}}
                     @if($product->isOnSale())
                         <span class="badge badge-sale">{{ $product->discountPercent() }}% off</span>
                     @elseif($product->created_at->diffInDays() < 7)
@@ -151,13 +201,11 @@
                         <span class="badge badge-hot">Low stock</span>
                     @endif
 
-                    {{-- Out of stock overlay --}}
                     @if(!$product->inStock())
                         <div class="out-of-stock-overlay">Out of stock</div>
                     @endif
                 </div>
 
-                {{-- Product Info --}}
                 <div class="product-body">
                     <div class="product-category">{{ $product->category->name }}</div>
                     <h3 class="product-name">
@@ -165,63 +213,32 @@
                     </h3>
                     <p class="product-desc">{{ Str::limit($product->description, 60) }}</p>
 
-<div class="product-footer">
-    <div class="product-price">
-        @if($product->isOnSale())
-            <span class="price-old">
-                ₹{{ number_format($product->old_price) }}
-            </span>
-        @endif
+                    <div class="product-footer">
+                        <div class="product-price">
+                            @if($product->isOnSale())
+                                <span class="price-old">₹{{ number_format($product->old_price) }}</span>
+                            @endif
+                            <span class="price-current">₹{{ number_format($product->price) }}</span>
+                        </div>
 
-        <span class="price-current">
-            ₹{{ number_format($product->price) }}
-        </span>
-    </div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            @auth
+                                @if(auth()->user()->isCustomer())
+                                <button class="wishlist-btn" data-id="{{ $product->id }}" data-wishlisted="{{ in_array($product->id, $wishlistIds) ? 'true' : 'false' }}" onclick="toggleWishlist(this)" style="width:32px;height:32px;border-radius:50%;background:{{ in_array($product->id, $wishlistIds) ? '#FAECE7' : 'var(--cream)' }};color:{{ in_array($product->id, $wishlistIds) ? '#C85A3A' : 'var(--muted)' }};border:1px solid {{ in_array($product->id, $wishlistIds) ? '#F5C4B3' : 'var(--border)' }};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0">
+                                    {{ in_array($product->id, $wishlistIds) ? '♥' : '♡' }}
+                                </button>
+                                @endif
+                            @endauth
 
-    <div style="display:flex;align-items:center;gap:8px">
-
-        {{-- ❤️ Wishlist heart button --}}
-        @auth
-            @if(auth()->user()->isCustomer())
-            <button
-                class="wishlist-btn"
-                data-id="{{ $product->id }}"
-                data-wishlisted="{{ in_array($product->id, $wishlistIds) ? 'true' : 'false' }}"
-                onclick="toggleWishlist(this)"
-                title="{{ in_array($product->id, $wishlistIds) ? 'Remove from wishlist' : 'Add to wishlist' }}"
-                style="width:32px;height:32px;border-radius:50%;
-                       background:{{ in_array($product->id, $wishlistIds) ? '#FAECE7' : 'var(--cream)' }};
-                       color:{{ in_array($product->id, $wishlistIds) ? '#C85A3A' : 'var(--muted)' }};
-                       border:1px solid {{ in_array($product->id, $wishlistIds) ? '#F5C4B3' : 'var(--border)' }};
-                       font-size:16px;cursor:pointer;display:flex;
-                       align-items:center;justify-content:center;
-                       transition:all .2s;flex-shrink:0">
-                {{ in_array($product->id, $wishlistIds) ? '♥' : '♡' }}
-            </button>
-            @endif
-        @endauth
-
-        {{-- Add to cart button --}}
-        @auth
-            @if(auth()->user()->isCustomer() && $product->inStock())
-                <button
-                    class="add-to-cart-btn"
-                    data-id="{{ $product->id }}"
-                    onclick="addToCart(this)"
-                    title="Add to cart">
-                    +
-                </button>
-            @endif
-        @else
-            <a href="{{ route('login') }}"
-               class="add-to-cart-btn"
-               title="Login to buy">
-                +
-            </a>
-        @endauth
-
-          </div>
-        </div>
+                            @auth
+                                @if(auth()->user()->isCustomer() && $product->inStock())
+                                    <button class="add-to-cart-btn" data-id="{{ $product->id }}" onclick="addToCart(this)" title="Add to cart">+</button>
+                                @endif
+                            @else
+                                <a href="{{ route('login') }}" class="add-to-cart-btn" title="Login to buy">+</a>
+                            @endauth
+                        </div>
+                    </div>
                 </div>
             </div>
             @endforeach
@@ -242,11 +259,34 @@
 
 @push('scripts')
 <script>
+// ── Filter submit helper ─────────────────────────────────
+function submitFilter() {
+    document.getElementById('filterForm').submit();
+}
 
+// ── Auto scroll to #products when a filter is active ─────
+document.addEventListener('DOMContentLoaded', function () {
+    const params    = new URLSearchParams(window.location.search);
+    const hasFilter = params.has('search')   ||
+                      params.has('min_price') ||
+                      params.has('max_price') ||
+                      params.has('category')  ||
+                      params.has('sort')      ||
+                      params.has('in_stock');
+
+    if (hasFilter) {
+        const section = document.getElementById('products');
+        if (section) {
+            setTimeout(() => {
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 80);
+        }
+    }
+});
+
+// ── Add to cart via AJAX ─────────────────────────────────
 function addToCart(btn) {
     const productId = btn.getAttribute('data-id');
-
-    // Disable button while request runs
     btn.disabled    = true;
     btn.textContent = '...';
 
@@ -255,73 +295,40 @@ function addToCart(btn) {
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            'Accept': 'application/json',
+            'Accept':       'application/json',
         },
-        body: JSON.stringify({
-            product_id: productId
-        }),
+        body: JSON.stringify({ product_id: productId }),
     })
-    .then(res => res.json())
+    .then(r => r.json())
     .then(data => {
-
         if (data.success) {
-
-            // Green success state
             btn.textContent      = '✓';
             btn.style.background = '#1D9E75';
-
-            // Update cart badge
             const badge = document.getElementById('cartBadge');
-
-            if (badge) {
-                badge.textContent = data.cart_count;
-            }
-
-            // Toast
-            if (typeof showToast === 'function') {
-                showToast(data.message, '🛒');
-            }
-
-            // Reset button
-            setTimeout(() => {
-                btn.textContent      = '+';
-                btn.style.background = '';
-                btn.disabled         = false;
-            }, 1500);
-
+            if (badge) badge.textContent = data.cart_count;
+            if (typeof showToast === 'function') showToast(data.message, '🛒');
         } else {
-
-            // Error state
             btn.textContent      = '!';
             btn.style.background = '#C85A3A';
-
-            if (typeof showToast === 'function') {
-                showToast(data.message, '⚠️');
-            }
-
-            setTimeout(() => {
-                btn.textContent      = '+';
-                btn.style.background = '';
-                btn.disabled         = false;
-            }, 2000);
+            if (typeof showToast === 'function') showToast(data.message, '⚠️');
         }
+        setTimeout(() => {
+            btn.textContent      = '+';
+            btn.style.background = '';
+            btn.disabled         = false;
+        }, 1500);
     })
     .catch(err => {
-
         console.error('Cart error:', err);
-
         btn.textContent      = '+';
         btn.style.background = '';
         btn.disabled         = false;
     });
 }
 
-
-// Wishlist toggle
+// ── Wishlist toggle ──────────────────────────────────────
 function toggleWishlist(btn) {
-
     const productId  = btn.getAttribute('data-id');
-    const wishlisted = btn.getAttribute('data-wishlisted') === 'true';
     const routes     = document.getElementById('cartRoutes').dataset;
 
     fetch(routes.wishlistUrl, {
@@ -329,48 +336,32 @@ function toggleWishlist(btn) {
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            'Accept': 'application/json',
+            'Accept':       'application/json',
         },
-        body: JSON.stringify({
-            product_id: productId
-        }),
+        body: JSON.stringify({ product_id: productId }),
     })
     .then(r => r.json())
     .then(data => {
-
         if (data.success) {
-
-            // Update heart appearance
             if (data.in_wishlist) {
-
                 btn.textContent       = '♥';
                 btn.style.background  = '#FAECE7';
                 btn.style.color       = '#C85A3A';
                 btn.style.borderColor = '#F5C4B3';
-
                 btn.setAttribute('data-wishlisted', 'true');
-
             } else {
-
                 btn.textContent       = '♡';
                 btn.style.background  = 'var(--cream)';
                 btn.style.color       = 'var(--muted)';
                 btn.style.borderColor = 'var(--border)';
-
                 btn.setAttribute('data-wishlisted', 'false');
             }
-
-            // Toast notification
             if (typeof showToast === 'function') {
-                showToast(
-                    data.message,
-                    data.in_wishlist ? '❤️' : '🤍'
-                );
+                showToast(data.message, data.in_wishlist ? '❤️' : '🤍');
             }
         }
     })
     .catch(err => console.error('Wishlist error:', err));
 }
-
 </script>
 @endpush

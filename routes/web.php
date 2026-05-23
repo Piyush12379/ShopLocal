@@ -9,6 +9,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\CouponController;
 
 /*
 |--------------------------------------------------------------------------
@@ -73,6 +74,10 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
     // Reviews
     Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])->name('reviews.store');
 
+    // Coupons
+    Route::post('/coupon/apply',  [CouponController::class, 'apply'])->name('coupon.apply');
+    Route::post('/coupon/remove', [CouponController::class, 'remove'])->name('coupon.remove');
+
 });
 
 /*
@@ -130,5 +135,10 @@ Route::middleware(['auth', 'role:admin'])
     Route::get('/categories',                   [AdminController::class, 'categories'])->name('categories');
     Route::post('/categories',                  [AdminController::class, 'storeCategory'])->name('categories.store');
     Route::delete('/categories/{category}',     [AdminController::class, 'deleteCategory'])->name('categories.delete');
+
+    // Coupons
+    Route::get('/coupons',                   [AdminController::class, 'coupons'])->name('coupons');
+    Route::post('/coupons',                  [AdminController::class, 'storeCoupon'])->name('coupons.store');
+    Route::delete('/coupons/{coupon}',       [AdminController::class, 'deleteCoupon'])->name('coupons.delete');
 
 });

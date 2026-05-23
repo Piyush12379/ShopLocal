@@ -39,6 +39,12 @@
            class="dash-nav-item {{ request()->routeIs('admin.categories') ? 'active' : '' }}">
             🏷️ Categories
         </a>
+         <a href="{{ route('admin.coupons') }}"
+           class="dash-nav-item {{ request()->routeIs('admin.coupons') ? 'active' : '' }}">
+            🎟️ Coupons
+        </a>
+
+
         <a href="{{ route('home') }}" class="dash-nav-item">🏠 View store</a>
         <form method="POST" action="{{ route('logout') }}" style="padding:20px">
             @csrf

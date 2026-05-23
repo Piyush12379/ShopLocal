@@ -12,6 +12,8 @@ class Order extends Model
         'status',
         'payment_method',
         'address',
+        'coupon_code',
+        'discount',
     ];
 
     // Order belongs to a customer

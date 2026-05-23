@@ -49,7 +49,6 @@
 
                         <div class="ci-bottom">
 
-                            {{-- ✅ FIX: product id in data attribute, not inside onclick() --}}
                             <button class="qty-btn"
                                     data-id="{{ $id }}"
                                     data-action="minus"
@@ -71,7 +70,6 @@
                                 ₹{{ number_format($item['price'] * $item['quantity']) }}
                             </span>
 
-                            {{-- ✅ FIX: id in data attribute --}}
                             <button class="ci-remove"
                                     data-id="{{ $id }}"
                                     onclick="removeItem(this)">
@@ -108,38 +106,79 @@
     @if(!empty($cart))
     <div class="order-summary">
         <div class="os-title">Order summary</div>
-
+        
         @foreach($cart as $id => $item)
         <div class="os-row">
             <span>{{ Str::limit($item['name'], 22) }} × {{ $item['quantity'] }}</span>
             <span>₹{{ number_format($item['price'] * $item['quantity']) }}</span>
         </div>
         @endforeach
-
+        
         <div style="border-top:1px solid var(--border);margin:12px 0"></div>
+        
+        <div class="os-row">
+            <span>Subtotal</span>
+            <span>₹{{ number_format($total) }}</span>
+        </div>
 
-        {{-- Delivery --}}
+        {{-- Coupon discount --}}
+        @if($coupon && $discount > 0)
+        <div class="os-row" style="color:#1D9E75">
+            <span>
+                Coupon ({{ $coupon['code'] }})
+                <button onclick="removeCoupon()"
+                        style="background:none;border:none;color:#C85A3A;cursor:pointer;
+                               font-size:11px;margin-left:4px;padding:0">✕ Remove</button>
+            </span>
+            <span>−₹{{ number_format($discount) }}</span>
+        </div>
+        @endif
+
         <div class="os-row">
             <span>Delivery</span>
-            {{-- ✅ FIX: no Blade inside style — use class instead --}}
-            @if($total >= 500)
+            @if($delivery == 0)
                 <span style="color:#1D9E75;font-weight:500">Free</span>
             @else
-                <span>₹50</span>
+                <span>₹{{ $delivery }}</span>
             @endif
         </div>
 
-        {{-- Total --}}
         <div class="os-row total">
             <span>Total</span>
-            <span id="cartGrandTotal">
-                ₹{{ number_format($total + ($total >= 500 ? 0 : 50)) }}
-            </span>
+            <span id="grandTotal">₹{{ number_format($grand) }}</span>
         </div>
 
-        @if($total < 500)
+        {{-- RESTORED: Free delivery upsell message --}}
+        @if(($total - $discount) < 500)
         <div style="font-size:12px;color:var(--muted);text-align:center;margin:8px 0 14px">
-            Add ₹{{ number_format(500 - $total) }} more for free delivery
+            Add ₹{{ number_format(500 - ($total - $discount)) }} more for free delivery
+        </div>
+        @endif
+
+        {{-- Coupon input --}}
+        @if(!$coupon)
+        <div style="margin:14px 0">
+            <div style="font-size:12px;font-weight:500;margin-bottom:6px;color:var(--muted)">
+                Have a coupon?
+            </div>
+            <div style="display:flex;gap:6px">
+                <input type="text"
+                       id="couponCode"
+                       placeholder="Enter coupon code"
+                       style="flex:1;padding:8px 12px;border:1px solid var(--border);
+                              border-radius:var(--r);font-size:13px;text-transform:uppercase;
+                              font-family:var(--ff-body)"/>
+                <button onclick="applyCoupon()"
+                        class="btn btn-warm btn-sm">Apply</button>
+            </div>
+            <div id="couponMsg" style="font-size:12px;margin-top:6px;display:none"></div>
+        </div>
+        @else
+        <div style="background:#E1F5EE;border:1px solid #9FE1CB;border-radius:var(--r);
+                    padding:8px 12px;font-size:12px;color:#085041;margin:14px 0;
+                    display:flex;justify-content:space-between;align-items:center">
+            <span>🎉 Coupon <strong>{{ $coupon['code'] }}</strong> applied</span>
+            <span>−₹{{ number_format($discount) }}</span>
         </div>
         @endif
 
@@ -149,15 +188,15 @@
            style="width:100%;justify-content:center;padding:14px;margin-top:8px">
             Proceed to checkout →
         </a>
-
+        
         <a href="{{ route('home') }}"
            class="btn btn-outline btn-sm"
            style="width:100%;justify-content:center;margin-top:10px">
             ← Continue shopping
         </a>
 
-        {{-- Trust badges --}}
-        <div style="display:flex;justify-content:center;gap:16px;margin-top:16px;font-size:11px;color:var(--muted)">
+        <div style="display:flex;justify-content:center;gap:16px;
+                    margin-top:16px;font-size:11px;color:var(--muted)">
             <span>🔒 Secure</span>
             <span>↩️ 7-day returns</span>
             <span>🚚 Fast delivery</span>
@@ -172,6 +211,8 @@
      data-add-url="{{ route('cart.add') }}"
      data-update-url="{{ route('cart.update') }}"
      data-remove-url="{{ route('cart.remove') }}"
+     data-coupon-apply-url="{{ route('coupon.apply') }}"
+     data-coupon-remove-url="{{ route('coupon.remove') }}"
      style="display:none">
 </div>
 
@@ -249,5 +290,69 @@ function removeItem(btn) {
     })
     .catch(err => console.error('Remove error:', err));
 }
+
+// ── Apply coupon ──────────────────────────────────────────
+function applyCoupon() {
+    const code  = document.getElementById('couponCode').value.trim();
+    const msg   = document.getElementById('couponMsg');
+    const routes = document.getElementById('cartRoutes').dataset;
+
+    if (!code) {
+        msg.style.display = 'block';
+        msg.style.color   = '#C85A3A';
+        msg.textContent   = 'Please enter a coupon code.';
+        return;
+    }
+
+    fetch(routes.couponApplyUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept':       'application/json',
+        },
+        body: JSON.stringify({ code: code }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        msg.style.display = 'block';
+        if (data.success) {
+            msg.style.color = '#1D9E75';
+            msg.textContent = data.message;
+            // Reload to show updated totals
+            setTimeout(() => location.reload(), 800);
+        } else {
+            msg.style.color = '#C85A3A';
+            msg.textContent = data.message;
+        }
+    });
+}
+
+// ── Remove coupon ─────────────────────────────────────────
+function removeCoupon() {
+    const routes = document.getElementById('cartRoutes').dataset;
+
+    fetch(routes.couponRemoveUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept':       'application/json',
+        },
+        body: JSON.stringify({}),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) location.reload();
+    });
+}
+
+// Allow pressing Enter in coupon input
+document.getElementById('couponCode')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') { 
+        e.preventDefault(); 
+        applyCoupon(); 
+    }
+});
 </script>
 @endpush

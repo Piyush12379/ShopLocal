@@ -10,16 +10,18 @@ class CartController extends Controller
     /**
      * Show the cart page
      */
-    public function index()
-    {
-        // Read cart from session
-        // Cart structure: ['product_id' => ['product' => [...], 'quantity' => 2], ...]
-        $cart     = session()->get('cart', []);
-        $total    = $this->calculateTotal($cart);
-        $count    = $this->calculateCount($cart);
+public function index()
+{
+    $cart     = session()->get('cart', []);
+    $total    = $this->calculateTotal($cart);
+    $count    = $this->calculateCount($cart);
+    $coupon   = session()->get('coupon');
+    $discount = $coupon ? $coupon['discount'] : 0;
+    $delivery = ($total - $discount) >= 500 ? 0 : 50;
+    $grand    = $total - $discount + $delivery;
 
-        return view('cart.index', compact('cart', 'total', 'count'));
-    }
+    return view('cart.index', compact('cart', 'total', 'count', 'coupon', 'discount', 'delivery', 'grand'));
+}
 
     /**
      * Add a product to cart
@@ -136,12 +138,13 @@ class CartController extends Controller
     /**
      * Clear entire cart
      */
-    public function clear()
-    {
-        session()->forget('cart');
-        return redirect()->route('cart.index')
-                         ->with('success', 'Cart cleared.');
-    }
+public function clear()
+{
+    session()->forget('cart');
+    session()->forget('coupon'); // Clear coupon too
+    return redirect()->route('cart.index')
+                     ->with('success', 'Cart cleared.');
+}
 
     // ── Private helpers ──────────────────────────────
 

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Barryvdh\DomPDF\Facade\Pdf;
 
-// // Mailable classes (make sure these exist)
+// Mailable classes
 use App\Mail\OrderConfirmationMail;
 use App\Mail\VendorOrderNotificationMail;
 
@@ -25,11 +25,14 @@ class OrderController extends Controller
                 ->with('error', 'Your cart is empty.');
         }
 
-        $total = $this->calculateTotal($cart);
-        $delivery = $total >= 500 ? 0 : 50;
-        $grand = $total + $delivery;
+        // ── NEW: Coupon logic for the checkout view ──────────────
+        $total    = $this->calculateTotal($cart);
+        $coupon   = session()->get('coupon');
+        $discount = $coupon ? $coupon['discount'] : 0;
+        $delivery = ($total - $discount) >= 500 ? 0 : 50;
+        $grand    = $total - $discount + $delivery;
 
-        return view('checkout.index', compact('cart', 'total', 'delivery', 'grand'));
+        return view('checkout.index', compact('cart', 'total', 'coupon', 'discount', 'delivery', 'grand'));
     }
 
     public function placeOrder(Request $request)
@@ -51,9 +54,12 @@ class OrderController extends Controller
                 ->with('error', 'Your cart is empty.');
         }
 
-        $total = $this->calculateTotal($cart);
-        $delivery = $total >= 500 ? 0 : 50;
-        $grand = $total + $delivery;
+        // ── NEW: Apply coupon discount to final order total ──────
+        $total    = $this->calculateTotal($cart);
+        $coupon   = session()->get('coupon');
+        $discount = $coupon ? $coupon['discount'] : 0;
+        $delivery = ($total - $discount) >= 500 ? 0 : 50;
+        $grand    = $total - $discount + $delivery;
 
         DB::beginTransaction();
 
@@ -71,6 +77,8 @@ class OrderController extends Controller
                     $request->state,
                     $request->pincode,
                 ]),
+                'coupon_code' => session('coupon.code'),
+                'discount'    => session('coupon.discount', 0),
             ]);
 
             foreach ($cart as $id => $item) {
@@ -85,6 +93,12 @@ class OrderController extends Controller
             }
 
             DB::commit();
+
+            // ── NEW: Increment coupon usage after successful save ──
+            if ($coupon) {
+                \App\Models\Coupon::where('code', $coupon['code'])->increment('used_count');
+                session()->forget('coupon');
+            }
 
             /*
             |------------------------------------------------------

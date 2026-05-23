@@ -148,7 +148,6 @@
 </head>
 <body>
 
-    <!-- HEADER -->
     <div class="header">
         <div>
             <div class="logo">Shop<span>Local</span></div>
@@ -163,7 +162,6 @@
         </div>
     </div>
 
-    <!-- BILLING INFO -->
     <div class="info-grid">
         <div class="info-box">
             <h4>Billed to</h4>
@@ -194,7 +192,6 @@
         </div>
     </div>
 
-    <!-- ITEMS TABLE -->
     <table class="items-table">
         <thead>
             <tr>
@@ -216,40 +213,49 @@
                 </td>
                 <td>{{ $item->product->vendor->name ?? '—' }}</td>
                 <td>{{ $item->quantity }}</td>
-                <td>₹{{ number_format($item->unit_price) }}</td>
-                <td>₹{{ number_format($item->unit_price * $item->quantity) }}</td>
+                {{-- CHANGED TO Rs. --}}
+                <td>Rs. {{ number_format($item->unit_price) }}</td>
+                <td>Rs. {{ number_format($item->unit_price * $item->quantity) }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
 
-    <!-- TOTALS -->
     <div class="totals">
         @php
             $subtotal = $order->items->sum(fn($i) => $i->unit_price * $i->quantity);
-            $delivery = $order->total_amount - $subtotal;
+            // Delivery is the grand total, plus the discount, minus the subtotal
+            $delivery = $order->total_amount + $order->discount - $subtotal;
         @endphp
+        
         <div class="totals-row">
             <span class="label">Subtotal</span>
-            <span>₹{{ number_format($subtotal) }}</span>
+            <span>Rs. {{ number_format($subtotal) }}</span>
         </div>
+
+        @if($order->discount > 0)
+        <div class="totals-row">
+            <span class="label">Discount ({{ $order->coupon_code }})</span>
+            <span style="color: #1D9E75; font-weight: 600;">-Rs. {{ number_format($order->discount) }}</span>
+        </div>
+        @endif
+
         <div class="totals-row">
             <span class="label">Delivery</span>
-            <span>{{ $delivery <= 0 ? 'Free' : '₹' . number_format($delivery) }}</span>
+            <span>{{ $delivery <= 0 ? 'Free' : 'Rs. ' . number_format($delivery) }}</span>
         </div>
+        
         <div class="totals-row">
-            <span class="label">Total</span>
-            <span>₹{{ number_format($order->total_amount) }}</span>
+            <span class="label">Grand Total</span>
+            <span>Rs. {{ number_format($order->total_amount) }}</span>
         </div>
     </div>
 
-    <!-- THANK YOU -->
     <div class="thank-you">
         <strong>Thank you for shopping with ShopLocal!</strong><br/>
         Every purchase supports a local artisan. ❤️
     </div>
 
-    <!-- FOOTER -->
     <div class="footer">
         <span>ShopLocal © {{ date('Y') }}</span>
         <span>This is a computer-generated invoice and does not require a signature.</span>

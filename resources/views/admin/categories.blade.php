@@ -14,6 +14,7 @@
         <a href="{{ route('admin.orders') }}"     class="dash-nav-item">🛍️ Orders</a>
         <a href="{{ route('admin.products') }}"   class="dash-nav-item">📦 Products</a>
         <a href="{{ route('admin.categories') }}" class="dash-nav-item active">🏷️ Categories</a>
+        <a href="{{ route('admin.coupons') }}" class="dash-nav-item {{ request()->routeIs('admin.coupons') ? 'active' : '' }}">🎟️ Coupons</a>
         <a href="{{ route('home') }}"             class="dash-nav-item">🏠 View store</a>
     </div>
     <div class="dash-main">

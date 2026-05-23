@@ -177,4 +177,51 @@ class AdminController extends Controller
         $category->delete();
         return back()->with('success', 'Category deleted.');
     }
+
+    // ── NEW: Coupon Management Methods ───────────────────────
+
+    /**
+     * Show coupon management page
+     */
+    public function coupons()
+    {
+        $coupons = \App\Models\Coupon::latest()->get();
+        return view('admin.coupons', compact('coupons'));
+    }
+
+    /**
+     * Create a new coupon
+     */
+    public function storeCoupon(Request $request)
+    {
+        $request->validate([
+            'code'       => 'required|string|max:20|unique:coupons,code',
+            'type'       => 'required|in:percent,flat',
+            'value'      => 'required|numeric|min:1',
+            'min_order'  => 'nullable|numeric|min:0',
+            'max_uses'   => 'nullable|integer|min:1',
+            'expires_at' => 'nullable|date|after:today',
+        ]);
+
+        \App\Models\Coupon::create([
+            'code'       => strtoupper($request->code),
+            'type'       => $request->type,
+            'value'      => $request->value,
+            'min_order'  => $request->min_order ?? 0,
+            'max_uses'   => $request->max_uses ?? 100,
+            'expires_at' => $request->expires_at,
+            'is_active'  => true,
+        ]);
+
+        return back()->with('success', 'Coupon "' . strtoupper($request->code) . '" created!');
+    }
+
+    /**
+     * Delete a coupon
+     */
+    public function deleteCoupon(\App\Models\Coupon $coupon)
+    {
+        $coupon->delete();
+        return back()->with('success', 'Coupon deleted.');
+    }
 }

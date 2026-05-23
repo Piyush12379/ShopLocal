@@ -165,22 +165,32 @@
 
         <div style="border-top:1px solid var(--border);margin:14px 0"></div>
 
-        <div class="os-row">
-            <span>Subtotal</span>
-            <span>₹{{ number_format($total) }}</span>
-        </div>
-        <div class="os-row">
-            <span>Delivery</span>
-            @if($delivery == 0)
-                <span style="color:#1D9E75;font-weight:500">Free</span>
-            @else
-                <span>₹{{ $delivery }}</span>
-            @endif
-        </div>
-        <div class="os-row total">
-            <span>Total</span>
-            <span>₹{{ number_format($grand) }}</span>
-        </div>
+    <div class="os-row">
+        <span>Subtotal</span>
+        <span>₹{{ number_format($total) }}</span>
+    </div>
+
+    {{-- Show coupon discount if applied --}}
+    @if($coupon && $discount > 0)
+    <div class="os-row" style="color:#1D9E75">
+          <span>Coupon ({{ $coupon['code'] }})</span>
+           <span>−₹{{ number_format($discount) }}</span>
+    </div>
+    @endif
+
+    <div class="os-row">
+    <span>Delivery</span>
+     @if($delivery == 0)
+        <span style="color:#1D9E75;font-weight:500">Free</span>
+     @else
+        <span>₹{{ $delivery }}</span>
+     @endif
+   </div>
+
+   <div class="os-row total">
+      <span>Total</span>
+      <span>₹{{ number_format($grand) }}</span>
+   </div>
 
         <div style="margin-top:16px;padding:12px;background:var(--cream);border-radius:var(--r);font-size:12px;color:var(--muted);line-height:1.6">
             By placing this order you agree to our

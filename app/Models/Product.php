@@ -36,6 +36,19 @@ class Product extends Model
         return $this->hasMany(Review::class);
     }
 
+    // Product has many gallery images
+    public function images()
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('sort_order');
+    }
+
+    // Get primary image or first image
+    public function primaryImage(): ?ProductImage
+    {
+        return $this->images->firstWhere('is_primary', true)
+            ?? $this->images->first();
+    }
+
     // Helper — is this product on sale?
     public function isOnSale(): bool
     {

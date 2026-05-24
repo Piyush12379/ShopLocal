@@ -86,18 +86,18 @@ class ProductController extends Controller
     /**
      * Show a single product detail page
      */
-    public function show(Product $product)
-    {
-        // Load related data
-        $product->load('category', 'vendor', 'reviews.user');
+   public function show(Product $product)
+  {
+    // Load all related data including the new images relationship
+    $product->load('category', 'vendor', 'reviews.user', 'images');
 
-        // Related products from same category
-        $related = Product::where('category_id', $product->category_id)
-                          ->where('id', '!=', $product->id)
-                          ->where('is_active', true)
-                          ->take(4)
-                          ->get();
+    $related = Product::where('category_id', $product->category_id)
+                      ->where('id', '!=', $product->id)
+                      ->where('is_active', true)
+                      ->with('category', 'images')
+                      ->take(4)
+                      ->get();
 
-        return view('products.show', compact('product', 'related'));
-    }
+    return view('products.show', compact('product', 'related'));
+  }
 }

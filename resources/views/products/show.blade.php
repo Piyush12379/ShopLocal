@@ -7,28 +7,61 @@
     {{-- Back link --}}
     <a href="{{ route('home') }}"
        style="font-size:13px;color:var(--muted);text-decoration:none;display:inline-block;margin-bottom:24px">
-       ← Back to shop
+        ← Back to shop
     </a>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start">
 
-        {{-- LEFT: Product image --}}
-        <div style="background:var(--cream);border-radius:20px;height:380px;
-                    display:flex;align-items:center;justify-content:center;
-                    font-size:100px;position:relative;overflow:hidden">
-            @if($product->image)
-                <img src="{{ asset('storage/' . $product->image) }}"
-                     style="width:100%;height:100%;object-fit:cover"/>
-            @else
-                {{ $product->emoji }}
-            @endif
+        {{-- LEFT: Product image gallery --}}
+        <div>
+            {{-- Main large image --}}
+            <div id="mainImage"
+                 style="background:var(--cream);border-radius:20px;height:380px;
+                        display:flex;align-items:center;justify-content:center;
+                        font-size:100px;position:relative;overflow:hidden;
+                        border:1px solid var(--border)">
+                @php
+                    $productImages = $product->images;
+                    $primaryImage  = $product->primaryImage();
+                @endphp
 
-            @if($product->isOnSale())
-                <span style="position:absolute;top:16px;left:16px;background:#FAECE7;
-                             color:#993C1D;padding:4px 12px;border-radius:6px;
-                             font-size:13px;font-weight:700">
-                    {{ $product->discountPercent() }}% OFF
-                </span>
+                @if($primaryImage)
+                    <img id="mainImg"
+                         src="{{ $primaryImage->url() }}"
+                         alt="{{ $product->name }}"
+                         style="width:100%;height:100%;object-fit:cover"/>
+                @elseif($product->image)
+                    <img id="mainImg"
+                         src="{{ asset('storage/' . $product->image) }}"
+                         alt="{{ $product->name }}"
+                         style="width:100%;height:100%;object-fit:cover"/>
+                @else
+                    <span id="mainEmoji">{{ $product->emoji }}</span>
+                @endif
+
+                @if($product->isOnSale())
+                    <span style="position:absolute;top:16px;left:16px;background:#FAECE7;
+                                 color:#993C1D;padding:4px 12px;border-radius:6px;
+                                 font-size:13px;font-weight:700">
+                        {{ $product->discountPercent() }}% OFF
+                    </span>
+                @endif
+            </div>
+
+            {{-- Thumbnail row — show only if multiple images --}}
+            @if($productImages->count() > 1)
+            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+                @foreach($productImages as $img)
+                <div onclick="swapImage('{{ $img->url() }}', event)"
+                     style="width:72px;height:72px;border-radius:8px;overflow:hidden;
+                            border:2px solid {{ $img->is_primary ? 'var(--warm)' : 'var(--border)' }};
+                            cursor:pointer;flex-shrink:0;transition:border-color .2s"
+                     class="thumb-btn">
+                    <img src="{{ $img->url() }}"
+                         style="width:100%;height:100%;object-fit:cover"/>
+                </div>
+                @endforeach
+            </div>
             @endif
         </div>
 
@@ -216,7 +249,10 @@
             @foreach($related as $rp)
             <div class="product-card">
                 <div class="product-img">
-                    @if($rp->image)
+                    @php $rpPrimary = $rp->primaryImage(); @endphp
+                    @if($rpPrimary)
+                        <img src="{{ $rpPrimary->url() }}" alt="{{ $rp->name }}"/>
+                    @elseif($rp->image)
                         <img src="{{ asset('storage/' . $rp->image) }}" alt="{{ $rp->name }}"/>
                     @else
                         <span class="product-emoji">{{ $rp->emoji }}</span>
@@ -283,6 +319,27 @@ function addToCart(btn) {
             btn.disabled = false;
         }, 2000);
     });
+}
+
+// Swap main image when thumbnail is clicked
+function swapImage(url, event) {
+    const main = document.getElementById('mainImg');
+    if (main) {
+        main.style.opacity = '0';
+        main.style.transition = 'opacity .2s';
+        setTimeout(() => {
+            main.src = url;
+            main.style.opacity = '1';
+        }, 200);
+    }
+    
+    // Update thumbnail border highlight
+    document.querySelectorAll('.thumb-btn').forEach(btn => {
+        btn.style.borderColor = 'var(--border)';
+    });
+    if(event && event.currentTarget) {
+        event.currentTarget.style.borderColor = 'var(--warm)';
+    }
 }
 </script>
 @endpush

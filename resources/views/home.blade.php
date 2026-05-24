@@ -32,7 +32,16 @@
         @if($featuredProduct)
         <div class="hero-visual">
             <div class="hero-product-card">
-                <div class="hero-product-img">{{ $featuredProduct->emoji }}</div>
+                <div class="hero-product-img">
+                    @php $featuredPrimary = $featuredProduct->primaryImage(); @endphp
+                    @if($featuredPrimary)
+                        <img src="{{ $featuredPrimary->url() }}" alt="{{ $featuredProduct->name }}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"/>
+                    @elseif($featuredProduct->image)
+                        <img src="{{ asset('storage/' . $featuredProduct->image) }}" alt="{{ $featuredProduct->name }}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"/>
+                    @else
+                        {{ $featuredProduct->emoji }}
+                    @endif
+                </div>
                 <div class="hero-product-tag">{{ $featuredProduct->category->name }}</div>
                 <div class="hero-product-name">{{ $featuredProduct->name }}</div>
                 <div class="hero-product-price">₹{{ number_format($featuredProduct->price) }}</div>
@@ -187,7 +196,11 @@
             @foreach($products as $product)
             <div class="product-card">
                 <div class="product-img">
-                    @if($product->image)
+                    {{-- ✅ UPDATED MULTIPLE IMAGE LOGIC --}}
+                    @php $primaryImg = $product->primaryImage(); @endphp
+                    @if($primaryImg)
+                        <img src="{{ $primaryImg->url() }}" alt="{{ $product->name }}"/>
+                    @elseif($product->image)
                         <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}"/>
                     @else
                         <span class="product-emoji">{{ $product->emoji }}</span>
